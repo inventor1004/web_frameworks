@@ -5,6 +5,59 @@ const spinnerBox = document.getElementById('spinner-box')
 const loadBtn = document.getElementById('load-btn');
 const endBox = document.getElementById('end-box');
 
+
+const getCookie = (name) => {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+          }
+      }
+  }
+  return cookieValue;
+};
+const csrftoken = getCookie('csrftoken');
+
+
+const likeUnlikePosts = () => {
+  const likeUnlikeForms = [...document.getElementsByClassName('like-unlike-form')];
+  likeUnlikeForms.forEach(form => {
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const clickedId = e.target.getAttribute('data-form-id');
+      const clickedBtn = document.getElementById('like-unlike-' + clickedId);
+
+      $.ajax({
+        type: 'POST',
+        url: "/like-unlike/",
+        data: {
+            'csrfmiddlewaretoken': csrftoken,
+            'pk': clickedId,
+        },
+        success: function(response){
+            console.log(response);
+            const btnId = response.id;
+            const updatedBtn = document.getElementById('like-unlike-' + btnId);
+            if (updatedBtn) {
+                updatedBtn.textContent = response.liked ? 'Unlike (' + response.count + ')': 'Like (' + response.count + ')';
+            } else {
+                console.error('Button not found:', 'like-unlike-' + btnId);
+            }
+        },
+        error: function(error){
+            console.log(error);
+        }
+      });
+    });
+  });
+};
+
+
+
 let visible = 3
 const getData = () => {
   $.ajax({
@@ -29,13 +82,15 @@ const getData = () => {
                     <a href="#" class="btn btn-primary">Details</a>
                   </div>
                   <div class="col-2">
-                    <a href="#" class="btn btn-primary">${el.liked ? `Unlike (${el.count})`: `Like (${el.count})`}</a>
+                    <form class="like-unlike-form" data-form-id="${el.id}">
+                    <button class="btn btn-primary" id="like-unlike-${el.id}">${el.liked ? 'Unlike (' + el.count + ')': 'Like (' + el.count + ')'}</button>
                   </div>
                 </div>
               </div>
             </div>
           `
         })
+        likeUnlikePosts();
       }, 1000)
       console.log(response.size);
       if (response.size === 0) {
